@@ -187,74 +187,172 @@ data().map(page => ({
 
 ## API Reference
 
+### Function Signature
+
+```ts
+function createInfiniteResource<T, P = number | string>(
+  fetcher: (
+    pageKey: P, 
+    context: FetcherContext<P>
+  ) => Promise<T>,
+  options?: InfiniteResourceOptions<T, P>
+): InfiniteResourceReturn<T, P>
+```
+
 ### Types
 
-```typescript
-function createInfiniteResource<T, P = number | string>(
-  fetcher: (pageKey: P, context: FetcherContext<P>) => Promise<T>,
-  options: InfiniteResourceOptions<T, P>
-): InfiniteResourceReturn<T, P>
-
+#### Options
+```ts
 type InfiniteResourceOptions<T, P> = {
-  // Starting page key
+  // Initial page key passed to fetcher
   initialPageKey: P;
   
-  // Maximum pages to keep in memory
+  // Maximum number of pages to keep in memory
   maxPages?: number;
   
-  // Custom merge function for pages
+  // Custom function to merge pages
   mergeData?: (prevPages: T[], newPage: T) => T[];
   
-  // Error callback
+  // Called when fetcher throws
   onError?: (error: Error) => void;
-}
+  
+  // All createResource options
+  initialValue?: T;
+  name?: string;
+  deferStream?: boolean;
+  storage?: () => Signal<T | undefined>;
+} & ResourceOptions<T>
+```
 
+#### Fetcher Context
+```ts
 type FetcherContext<P> = {
+  // Set the next page key
   setNextPageNumber: Setter<P>;
+  
+  // Check if at end
   hasReachedEnd: Accessor<boolean>;
+  
+  // Mark as complete
   setHasReachedEnd: Setter<boolean>;
 }
+```
 
+#### Return Value
+```ts
 type InfiniteResourceReturn<T, P> = {
-  // The merged dataset
+  // Merged data from all pages
+  // If T is an array type, flattens by default
   data: Accessor<T extends Array<infer U> ? U[] : T[]>;
   
-  // Page resource
+  // Raw page responses
+  allData: Accessor<T[]>;
+  
+  // Current page resource
   pageData: Resource<T>;
   
-  // Manually fetch next page
+  // Trigger next page load
   getNextPage: () => void;
   
-  // Current page key
+  // Get/set page key
   pageKey: Accessor<P>;
+  setPageKey: Setter<P>;
   
-  // Whether all data is loaded
+  // End of data tracking
   hasReachedEnd: Accessor<boolean>;
+  setHasReachedEnd: Setter<boolean>;
   
-  // Directive for viewport loading
-  refetchOnView: Directive<[
-    boolean | (() => boolean),
-    () => void
-  ]>;
+  // Intersection observer directive
+  refetchOnView: Directive<RefetchDirectiveArgs>;
+  
+  // Underlying resource
+  resource: ResourceReturn<T>;
 }
+
+// Directive arguments
+type RefetchDirectiveArgs = [
+  boolean | (() => boolean), // Condition
+  () => void                 // Callback
+] | (() => [
+  boolean | (() => boolean),
+  () => void
+])
 ```
 
-### Intersection Observer Directive
+### Methods
 
-The `refetchOnView` directive provides viewport-based loading:
+#### getNextPage
+Triggers the next page load using the current page key.
+```ts
+const { getNextPage } = createInfiniteResource(fetcher);
+getNextPage(); // Loads next page if !hasReachedEnd
+```
 
-```tsx
-// Basic usage
-<div use:refetchOnView={[true, getNextPage]}>
-  Loading...
-</div>
+#### refetchOnView
+Directive for viewport-based loading.
+```ts
+// Attach to element
+<div use:refetchOnView={[condition, callback]} />
 
-// With condition
+// With reactive condition
 <div use:refetchOnView={[
-  () => !isLoading() && !hasReachedEnd(),
-  getNextPage
-]}>
-  Loading...
-</div>
+  () => canLoadMore(),
+  () => loadMore()
+]} />
 ```
 
+### Properties
+
+#### data
+Returns merged data from all pages. By default, flattens arrays:
+```ts
+// With array responses
+type T = Product[]
+const { data } = createInfiniteResource<T>();
+data(); // Product[] (flattened from all pages)
+
+// With custom merging
+const { data } = createInfiniteResource<T>({
+  mergeData: (prev, next) => [...prev, next]
+});
+data(); // Product[][] (array of pages)
+```
+
+#### pageData
+Resource for current page with loading states:
+```ts
+const { pageData } = createInfiniteResource();
+pageData.loading;  // Current page loading
+pageData.error;    // Current page error
+pageData();        // Current page data
+```
+
+#### hasReachedEnd
+Tracks if all data has been loaded:
+```ts
+const { hasReachedEnd } = createInfiniteResource();
+hasReachedEnd(); // boolean
+
+// Common pattern
+<Show 
+  when={!hasReachedEnd()} 
+  fallback="No more items"
+>
+  <LoadMoreButton />
+</Show>
+```
+
+### Resource Access
+
+The underlying resource is exposed for advanced cases:
+```ts
+const { resource } = createInfiniteResource(fetcher);
+const [data, { refetch }] = resource;
+
+// Manual refetch with context
+refetch({
+  setNextPageNumber,
+  hasReachedEnd,
+  setHasReachedEnd
+});
+```

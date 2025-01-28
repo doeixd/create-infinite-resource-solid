@@ -20,18 +20,18 @@ This primitive wraps `createResource` with some key differences:
 1. The fetcher receives a context object for pagination control:
 ```ts
 type FetcherContext<P> = {
-  setNextPageNumber: Setter<P>;   // Set next page/cursor
+  setNextPageKey: Setter<P>;   // Set next page/cursor
   hasReachedEnd: Accessor<boolean>; // Check if at end
   setHasReachedEnd: Setter<boolean>; // Mark as complete
 }
 
 // Usage
 const resource = createInfiniteResource(
-  async (page, { setNextPageNumber, setHasReachedEnd }) => {
+  async (page, { setNextPageKey, setHasReachedEnd }) => {
     const data = await fetchData(page);
     
     // Either set next page
-    setNextPageNumber(data.nextCursor);
+    setNextPageKey(data.nextCursor);
     // Or mark as complete
     setHasReachedEnd(true);
     
@@ -91,11 +91,11 @@ data(); // [page1, page2, page3]
 type Response = { items: Item[], nextCursor: string | null }
 
 createInfiniteResource<Response, string>(
-  async (cursor, { setNextPageNumber, setHasReachedEnd }) => {
+  async (cursor, { setNextPageKey, setHasReachedEnd }) => {
     const data = await fetch(`/api?cursor=${cursor}`);
     
     if (data.nextCursor) {
-      setNextPageNumber(data.nextCursor);
+      setNextPageKey(data.nextCursor);
     } else {
       setHasReachedEnd(true);
     }
@@ -136,7 +136,7 @@ createInfiniteResource(fetcher, {
 
 1. `maxPages` drops old data but doesn't refetch - consider UX implications
 2. Default array flattening assumes uniform page data
-3. Page keys must be managed manually through `setNextPageNumber`
+3. Page keys must be managed manually through `setNextPageKey`
 4. The directive assumes element visibility means "load more"
 
 ## Type Details
@@ -228,7 +228,7 @@ type InfiniteResourceOptions<T, P> = {
 ```ts
 type FetcherContext<P> = {
   // Set the next page key
-  setNextPageNumber: Setter<P>;
+  setNextPageKey: Setter<P>;
   
   // Check if at end
   hasReachedEnd: Accessor<boolean>;
@@ -351,7 +351,7 @@ const [data, { refetch }] = resource;
 
 // Manual refetch with context
 refetch({
-  setNextPageNumber,
+  setNextPageKey,
   hasReachedEnd,
   setHasReachedEnd
 });

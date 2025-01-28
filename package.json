@@ -1,6 +1,6 @@
 {
   "name": "@doeixd/create-infinite-resource-solid",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "files": [
     "dist",
     "src"
@@ -29,7 +29,7 @@
   "peerDependencies": {
     "solid-js": "^1.9"
   },
-  "scripts": {    
+  "scripts": {
     "release": "standard-version && git push --follow-tags origin main",
     "release:patch": "npm version patch && git push --follow-tags origin main",
     "release:minor": "npm version minor && git push --follow-tags origin main",

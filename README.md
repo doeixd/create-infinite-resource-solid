@@ -1,4 +1,4 @@
-# createInfiniteResource
+# `createInfiniteResource`
 
 A SolidJS primitive for managing paginated data fetching. Handles common infinite scrolling patterns.
 

@@ -2,6 +2,44 @@
 
 A SolidJS primitive for managing paginated data fetching. Handles common infinite scrolling patterns.
 
+## Instalation 
+
+```bash
+npm install @doeixd/create-infinite-resource-solid
+```
+
+## Why is this useful?
+
+This primitive solves several common challenges in building paginated interfaces:
+
+1. **Memory Management**
+   - Controls how much data is kept in memory
+   - Automatically removes old pages when limits are reached
+   - Prevents memory leaks in long-running applications
+
+2. **Complex Data Structures**
+   - Handles non-array responses (e.g., cursors, metadata)
+   - Preserves page-specific data when needed
+   - Provides type-safe data merging
+
+3. **Loading States**
+   - Manages concurrent loading states
+   - Tracks end-of-data conditions
+   - Handles loading errors gracefully
+
+4. **Intersection Observer**
+   - Built-in viewport detection
+   - Automatic cleanup on unmount
+   - Conditional loading control
+
+Common use cases:
+- Social media feeds
+- Product catalogs
+- Chat message history
+- Search results
+- Comment threads
+
+
 ## Basic Usage
 
 ```tsx

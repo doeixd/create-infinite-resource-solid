@@ -2,6 +2,13 @@
 
 A SolidJS primitive for managing paginated data fetching with built-in memory management and intersection observer support.
 
+### Features
+ - Creates refetchOnView directive for simple use-cases.
+ - Handles pagination and memory management with maxPages option
+ - Exposes loading states and error handling per page
+ - Preserves raw page data while providing merged access
+ - Zero-config array flattening with customizable merge strategies
+
 ## Instalation 
 
 ```bash

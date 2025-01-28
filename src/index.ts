@@ -24,7 +24,7 @@ type InfiniteResourceOptions<T, P> = {
 } & ResourceOptions<T>;
 
 type FetcherContext<P> = {
-  setNextPageNumber: Setter<P>;
+  setPageKey: Setter<P>;
   hasReachedEnd: Accessor<boolean>;
   setHasReachedEnd: Setter<boolean>;
 };
@@ -131,7 +131,7 @@ export function createInfiniteResource<T, P = number | string>(
     if (hasReachedEnd()) return;
 
     refetch({
-      setNextPageNumber: setPageKey,
+      setPageKey,
       hasReachedEnd,
       setHasReachedEnd,
     } satisfies FetcherContext<P>);

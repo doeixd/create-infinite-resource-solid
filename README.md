@@ -1,6 +1,6 @@
 # `createInfiniteResource`
 
-A SolidJS primitive for managing paginated data fetching. Handles common infinite scrolling patterns.
+A SolidJS primitive for managing paginated data fetching with built-in memory management and intersection observer support.
 
 ## Instalation 
 
@@ -10,77 +10,151 @@ npm install @doeixd/create-infinite-resource-solid
 
 ## Why is this useful?
 
-This primitive solves several common challenges in building paginated interfaces:
-
-1. **Memory Management**
-   - Controls how much data is kept in memory
-   - Automatically removes old pages when limits are reached
-   - Prevents memory leaks in long-running applications
-
-2. **Complex Data Structures**
-   - Handles non-array responses (e.g., cursors, metadata)
-   - Preserves page-specific data when needed
-   - Provides type-safe data merging
-
-3. **Loading States**
-   - Manages concurrent loading states
-   - Tracks end-of-data conditions
-   - Handles loading errors gracefully
-
-4. **Intersection Observer**
-   - Built-in viewport detection
-   - Automatic cleanup on unmount
-   - Conditional loading control
-
-Common use cases:
-- Social media feeds
-- Product catalogs
-- Chat message history
-- Search results
-- Comment threads
+Managing infinite scroll in SolidJS typically involves coordinating several primitives (resources, signals, effects) while handling pagination state, memory cleanup, and intersection observers. This primitive handles these concerns while remaining flexible enough for cursor-based pagination, complex data structures, and memory constraints.
 
 
-## Basic Usage
+## Core Concepts
 
-```tsx
-function ProductList() {
-  const { data, hasReachedEnd, refetchOnView } = createInfiniteResource(
-    async (page: number) => {
-      const response = await fetch(`/api/products?page=${page}`);
-      return response.json();
-    },
-    { initialPageKey: 1 }
-  );
+This primitive wraps `createResource` with some key differences:
 
-  return (
-    <div>
-      <For each={data()}>{product => 
-        <ProductCard product={product} />
-      }</For>
-
-      <div use:refetchOnView={[!hasReachedEnd(), getNextPage]}>
-        {hasReachedEnd() ? 'No more products' : 'Loading...'}
-      </div>
-    </div>
-  );
+1. The fetcher receives a context object for pagination control:
+```ts
+type FetcherContext<P> = {
+  setNextPageNumber: Setter<P>;   // Set next page/cursor
+  hasReachedEnd: Accessor<boolean>; // Check if at end
+  setHasReachedEnd: Setter<boolean>; // Mark as complete
 }
-```
 
-## Memory Management
-
-Controls how much data is kept in memory:
-
-```tsx
-const { data } = createInfiniteResource(
-  fetchProducts,
-  {
-    initialPageKey: 1,
-    maxPages: 5  // Only keep last 5 pages
+// Usage
+const resource = createInfiniteResource(
+  async (page, { setNextPageNumber, setHasReachedEnd }) => {
+    const data = await fetchData(page);
+    
+    // Either set next page
+    setNextPageNumber(data.nextCursor);
+    // Or mark as complete
+    setHasReachedEnd(true);
+    
+    return data;
   }
 );
 ```
 
-## Custom Data Structures
+2. Pages are accumulated rather than replaced:
+```ts
+// Default behavior: Flattens arrays
+const { data } = createInfiniteResource<string[]>();
+data(); // ["item1", "item2", "item3"] (from all pages)
+
+// Custom merging: Preserve page structure
+const { data } = createInfiniteResource<Response>({
+  mergeData: (prev, next) => [...prev, next]
+});
+data(); // [page1, page2, page3]
+```
+
+### Important Details
+
+1. **Memory Management**
+   ```ts
+   createInfiniteResource(fetcher, {
+     maxPages: 5 // Only keep last 5 pages
+   });
+   ```
+   When maxPages is hit, oldest pages are removed. This affects what's returned from `data()` but doesn't refetch dropped pages on scroll up.
+
+2. **Loading States**
+   ```ts
+   const { pageData, data } = createInfiniteResource();
+   pageData.loading; // Current page loading
+   data(); // All accumulated data (even during loads)
+   ```
+   Unlike regular resources, you get both the current page's loading state and accumulated data.
+
+3. **Intersection Observer**
+   ```ts
+   // Basic
+   <div use:refetchOnView={[true, getNextPage]}>
+   
+   // With conditions
+   <div use:refetchOnView={[
+     () => !isError() && !hasReachedEnd(),
+     getNextPage
+   ]}>
+   ```
+   The directive automatically cleans up observers and respects loading states.
+
+### Common Patterns
+
+1. **Cursor-based Pagination**
+```ts
+type Response = { items: Item[], nextCursor: string | null }
+
+createInfiniteResource<Response, string>(
+  async (cursor, { setNextPageNumber, setHasReachedEnd }) => {
+    const data = await fetch(`/api?cursor=${cursor}`);
+    
+    if (data.nextCursor) {
+      setNextPageNumber(data.nextCursor);
+    } else {
+      setHasReachedEnd(true);
+    }
+    return data;
+  },
+  {
+    initialPageKey: 'initial',
+    mergeData: (prev, next) => [...prev, next] // Keep cursor info
+  }
+);
+```
+
+2. **Error Handling with Retries**
+```ts
+createInfiniteResource(fetcher, {
+  onError: (error) => {
+    if (error.status === 429) { // Rate limit
+      setTimeout(getNextPage, 1000);
+    }
+  }
+});
+```
+
+3. **Virtual Lists**
+```ts
+// Keep limited window of data in memory
+createInfiniteResource(fetcher, {
+  maxPages: 3,
+  mergeData: (prev, next) => {
+    const window = [...prev, next].slice(-3);
+    virtualizer.setItemCount(totalCount);
+    return window;
+  }
+});
+```
+
+## Gotchas
+
+1. `maxPages` drops old data but doesn't refetch - consider UX implications
+2. Default array flattening assumes uniform page data
+3. Page keys must be managed manually through `setNextPageNumber`
+4. The directive assumes element visibility means "load more"
+
+## Type Details
+
+```ts
+createInfiniteResource<
+  T, // Response type (e.g., Product[])
+  P = number | string // Page key type
+>
+
+// For complex data:
+createInfiniteResource<Response, Cursor>
+// Response = { items: Product[], cursor: string }
+// Cursor = string
+```
+
+
+### Custom Data Structures
 
 For non-array responses, each page's data is preserved:
 
@@ -109,6 +183,7 @@ data().map(page => ({
   participants: page.participants
 }));
 ```
+
 
 ## API Reference
 
@@ -144,7 +219,7 @@ type InfiniteResourceReturn<T, P> = {
   // The merged dataset
   data: Accessor<T extends Array<infer U> ? U[] : T[]>;
   
-  // Raw page responses
+  // Page resource
   pageData: Resource<T>;
   
   // Manually fetch next page
@@ -183,31 +258,3 @@ The `refetchOnView` directive provides viewport-based loading:
 </div>
 ```
 
-## Key Concepts
-
-### Page Keys
-- Can be numbers (page numbers) or strings (cursors)
-- Passed to fetcher function
-- Used to track fetch state
-
-### Data Management
-- By default flattens array responses
-- `mergeData` preserves page structure
-- `maxPages` controls memory usage
-
-### Loading States
-- `pageData.loading` tracks current fetch
-- `hasReachedEnd` indicates completion
-- Error handling via `onError` callback
-
-### Cleanup
-- Automatically removes observers
-- Handles component unmounting
-- Memory cleanup with `maxPages`
-
-## Limitations
-
-- No built-in request debouncing/throttling
-- No automatic retry mechanism
-- No built-in error UI handling
-- All data management is in-memory

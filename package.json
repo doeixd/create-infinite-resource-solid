@@ -1,0 +1,79 @@
+{
+  "name": "create-infinite-resource-solid",
+  "version": "0.0.0",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "license": "MIT",
+  "keywords": [
+    "pridepack",
+    "solid-js",
+    "solidjs",
+    "create-infinite-resource",
+    "createResource",
+    "infinite"
+  ],
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "pridepack": "2.6.4",
+    "solid-js": "^1.9.4",
+    "standard-version": "9.5.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.7.2",
+    "vitest": "3.0.4"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9"
+  },
+  "scripts": {    
+    "release": "standard-version && git push --follow-tags origin main",
+    "release:patch": "npm version patch && git push --follow-tags origin main",
+    "release:minor": "npm version minor && git push --follow-tags origin main",
+    "release:major": "npm version major && git push --follow-tags origin main",
+    "prepublishOnly": "pridepack clean && pridepack build",
+    "build": "pridepack build",
+    "type-check": "pridepack check",
+    "clean": "pridepack clean",
+    "watch": "pridepack watch",
+    "start": "pridepack start",
+    "dev": "pridepack dev"
+  },
+  "private": false,
+  "description": "A createInfiniteResource helper for solid js",
+  "repository": {
+    "url": "",
+    "type": "git"
+  },
+  "homepage": "",
+  "bugs": {
+    "url": ""
+  },
+  "author": "Patrick Glenn",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@solid-primitives/utils": "^6.3.0"
+  },
+  "types": "./dist/types/index.d.ts",
+  "main": "./dist/cjs/production/index.jsx",
+  "module": "./dist/esm/production/index.jsx",
+  "exports": {
+    ".": {
+      "development": {
+        "require": "./dist/cjs/development/index.jsx",
+        "import": "./dist/esm/development/index.jsx"
+      },
+      "require": "./dist/cjs/production/index.jsx",
+      "import": "./dist/esm/production/index.jsx",
+      "types": "./dist/types/index.d.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {}
+  }
+}
